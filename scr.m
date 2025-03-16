@@ -79,6 +79,7 @@ wedge2::usage = "The second rule to deal with wedge products.";
 xsExpanded::usage = "A list of the Baikov variables used by SOFIABaikov[].";
 \[Delta]::usage = "An expansion parameter.";
 generatedSubtopologies::usage = " ";
+reflections::usage = " ";
 
 (*Initiate package:*)
 Begin["`Private`"]
@@ -766,6 +767,7 @@ Return[gramList];
 
 (*Symmetries:*)
 Clear[Symmetry];
+(*########################################################################################################################################################################################################*)
 Symmetry[edgenode1_,edgenode2_]:= Symmetry[edgenode1,edgenode2]=Module[{f,massorganizer,edges1,edges2,edgelist1,edgelist2,multiedgepos1,multiedgepos2,color1,color2,simpleedge1,simplegraph1,simpleedge2,simplegraph2,vertexrule,simpleedge1to2,edgepos1to2,intmass1to2,symmetries1to2,multisymmetries1to2,masses1to2,masses1to2b,masses1to2c,sym,multisymmetries1to2b,EnoughScalesQ,multisymmetries1to2c,vtomomenta,vtoM,massrepls,massmomorganizer,momrepls,Mext2to1,mint2to1,multisymmetries1to2d,next1,next2,kinematics1,kinematics2,intermediate2,intermediate1,CyclicBasis,intermom12,intermom12b,p1s,p2s,s1s,s2s,s1to2,extmasses,bestchoice , dominant, finalrepls,nodes1,nodes2,intmass1,intmass2,multi,multisymmetries1to2g,interfinal,dominant2,multisinglerepls,extscales,extmassesr,intscales,intmasses,intmassesr,extrepls,nodes1r,nodes2r,intrepls,Mext2to1b,Mext2to1final,mint2to1b,mint2to1final,system,systemfinal,v1,v2,vfirst,vsecond,invmassrepls,sol1,sol2,sol21,sol22,sol31,sol32,solfinal1,solfinal2,posfail1,soltrue1,soltrue2,dfirst,dsecond,solfinal,false},
 edges1=edgenode1[[1]];nodes1=edgenode1[[2]]; edges2=edgenode2[[1]];nodes2=edgenode2[[2]];
 If[UnsameQ[Length[edges1],Length[edges2]], (*checks immediately if number of edges is the same*)
@@ -800,6 +802,7 @@ masses1to2c=massorganizer/@masses1to2b(*/. {0,0}:>Sequence[]*);
 sym=Transpose[multisymmetries1to2][[1]];
 multisymmetries1to2b ={#[[1]],DeleteDuplicates[#[[2]]]}&/@Flatten[Table[Table[{sym[[i]],masses1to2c[[i,j]]},{j,1,masses1to2c[[i]]//Length}],{i,1,masses1to2c//Length}],1];
 (*EnoughScalesQ=Module[{var},var=Transpose[#[[2]]]; If[Times@@(Count[#,0]&/@var)>0,False, Or@@(DuplicateFreeQ/@var)]]&*);
+(*EnoughScalesQ=Module[{var},var=Transpose[#];  Or@@(DuplicateFreeQ/@var)]&;*)
 EnoughScalesQ=Module[{var,var2,var3,var4},var=#;  
 If[ Or@@(DuplicateFreeQ/@Transpose[var]), var2=var/.{0,0}->Sequence[];
 If[SameQ[var2,{}],True, var3= Position[Transpose[var2],0];
@@ -810,15 +813,16 @@ If[Length[var4]>1,False, Transpose[var2][[3-var4[[1]]]]//DuplicateFreeQ
 multisymmetries1to2c=Select[multisymmetries1to2b,EnoughScalesQ[#[[2]]]&];
 If[SameQ[multisymmetries1to2c,{}],(*checks if there are enough internal mass scales to make a replacement*)
 {},
-next1=Length[nodes1];next2=Length[nodes2];
+(*Update March 16 2025:*)
+ next1=Length[nodes1];next2=Length[nodes2];
 extmasses={Transpose[nodes1][[2]],Transpose[nodes2][[2]]};
-extscales=DeleteCases[#,0]&/@DeleteDuplicates/@extmasses (*needs changing if we want to include masses with numerical values not just 0*);extrepls={Table[extscales[[1,i]]->Subscript[M1, i],{i,1,extscales[[1]]//Length}],Table[extscales[[2,i]]->Subscript[M2, i],{i,1,extscales[[2]]//Length}]};
-extmassesr={extmasses[[1]]/.extrepls[[1]],extmasses[[2]]/.extrepls[[2]]};
-nodes1r=nodes1/.extrepls[[1]]; nodes2r=nodes2/.extrepls[[2]];
 intmasses={intmass1,intmass2};
-intscales=DeleteCases[#,0]&/@DeleteDuplicates/@intmasses(*needs changing if we want to include masses with numerical values not just 0*);
-intrepls={Table[intscales[[1,i]]->Subscript[m1, i],{i,1,intscales[[1]]//Length}],Table[intscales[[2,i]]->Subscript[m2, i],{i,1,intscales[[2]]//Length}]};
-intmassesr={intmasses[[1]]/.intrepls[[1]],intmasses[[2]]/.intrepls[[2]]};
+scales=Select[#,Not[NumericQ[#]]&]&/@DeleteDuplicates/@Flatten/@Transpose[{extmasses,intmasses}];
+repls={Table[scales[[1,i]]->Subscript[M1, i],{i,1,scales[[1]]//Length}],Table[scales[[2,i]]->Subscript[M2, i],{i,1,scales[[2]]//Length}]};
+nodes1r=nodes1/.repls[[1]]; nodes2r=nodes2/.repls[[2]];
+extmassesr={extmasses[[1]]/.repls[[1]],extmasses[[2]]/.repls[[2]]};
+intmassesr={intmasses[[1]]/.repls[[1]],intmasses[[2]]/.repls[[2]]}; (* until here *);
+
 vtomomenta[vrepls_]:=Transpose[{Flatten[Position[Transpose[nodes1r][[1]],#]&/@Transpose[List@@@vrepls][[1]],{3}][[1]],Flatten[Position[Transpose[nodes2r][[1]],#]&/@Transpose[List@@@vrepls][[2]],{3}][[1]]}];
 vtoM[vrepls_]:=Transpose[{Part[Transpose[nodes1r][[2]],#]&/@Flatten[Position[Transpose[nodes1r][[1]],#]&/@Transpose[List@@@vrepls][[1]],{3}][[1]],Part[Transpose[nodes2r][[2]],#]&/@Flatten[Position[Transpose[nodes2r][[1]],#]&/@Transpose[List@@@vrepls][[2]],{3}][[1]]}](*/. {}:>Sequence[]*);
 massrepls=vtoM/@Transpose[multisymmetries1to2c][[1]];
@@ -830,9 +834,9 @@ mint2to1=Transpose[multisymmetries1to2c][[2]];
 kinematics1=GenerateKinematics[next1]/.Subscript[M, i_]:>extmassesr[[1,i]]/.Subscript[s, x___]->Subscript[s1, x]/.Subscript[p, x_]->Subscript[p1, x]//Quiet;(*save in memory?*);
 kinematics2=GenerateKinematics[next2]/.Subscript[M, i_]:>extmassesr[[2,i]]/.Subscript[s, x___]->Subscript[s2, x]/.Subscript[p, x_]->Subscript[p2, x]//Quiet;
 Mext2to1b=({#[[1]]/.s[x___]:>Total[Subscript[p1, #]&/@{x}]\[CenterDot]Total[Subscript[p1, #]&/@{x}],#[[2]]/.s[x___]:>Total[Subscript[p2, #]&/@{x}]\[CenterDot]Total[Subscript[p2, #]&/@{x}]}&/@Transpose/@Mext2to1)/.kinematics1/.kinematics2;
-Mext2to1final=DeleteDuplicates/@Transpose/@Mext2to1b;
+Mext2to1final=(DeleteDuplicates/@Transpose/@Mext2to1b);
 mint2to1b=(Transpose/@mint2to1);
-mint2to1final=Transpose/@Table[{mint2to1b[[j,1]]/.intrepls[[1]],mint2to1b[[j,2]]/.intrepls[[2]]},{j,1,mint2to1b//Length}];
+mint2to1final=Transpose/@Table[{mint2to1b[[j,1]]/.repls[[1]],mint2to1b[[j,2]]/.repls[[2]]},{j,1,mint2to1b//Length}]/.{Subscript[M1, x_]->Subscript[MM1, x],Subscript[M2, x_]->Subscript[MM2, x]} ;
 CyclicBasis[n_]:=CyclicBasis[n]=Flatten[Table[Subscript[s, Sequence@@Sort[Mod[Range[a,a+l],n,1]]],{l,1,n/2-1},{a,If[l==n/2-1,n/2,n]}]];
 intermom12=Transpose/@Transpose[{Map[Subscript[p1, #]&,Transpose[Transpose/@momrepls][[1]],{3}],Map[Subscript[p2, #]&,Transpose[Transpose/@momrepls][[2]],{3}]}];
 intermom12b=Map[Total[#]&,intermom12,{3}];
@@ -842,14 +846,14 @@ s1s=Table[CyclicBasis[p1s[[i]]//Length]/.Subscript[s, x___]:>Total[p1s[[i,#]]&/@
 s2s=Table[CyclicBasis[p2s[[i]]//Length]/.Subscript[s, x___]:>Total[p2s[[i,#]]&/@{x}]\[CenterDot]Total[p2s[[i,#]]&/@{x}],{i,1,p2s//Length}]/.kinematics2;
 s1to2=DeleteDuplicates/@Transpose/@Transpose[{s1s,s2s}];
 multisymmetries1to2d={s1to2,Mext2to1final,mint2to1final};
-system=(DeleteDuplicates/@(Flatten[#,1]&/@Transpose[multisymmetries1to2d]))/.{Subscript[M1, x_]^2->Subscript[MM1, x],Subscript[M2, x_]^2->Subscript[MM2, x]};
+system=(DeleteDuplicates/@(Flatten[#,1]&/@Transpose[multisymmetries1to2d]))/.{Subscript[M1, x_]^2->Subscript[MM1, x],Subscript[M2, x_]^2->Subscript[MM2, x]} (*Update March 16 2025:*);
 systemfinal=Flatten/@Map[Replace[#,{x_,y_}->{x==y}]&,system,{2}];
-v1=Join[CyclicBasis[next1]/.Subscript[s, x___]->Subscript[s1, x],Table[Subscript[MM1, i],{i,1,extscales[[1]]//Length}],Table[Subscript[m1, i],{i,1,intscales[[1]]//Length}]];
-v2=Join[CyclicBasis[next2]/.Subscript[s, x___]->Subscript[s2, x],Table[Subscript[MM2, i],{i,1,extscales[[2]]//Length}],Table[Subscript[m2, i],{i,1,intscales[[2]]//Length}]];
-If[Length[intscales[[1]]]>=Length[intscales[[2]]],
+v1=Join[CyclicBasis[next1]/.Subscript[s, x___]->Subscript[s1, x],Table[Subscript[MM1, i],{i,1,scales[[1]]//Length}]] (*Update March 16 2025:*);
+v2=Join[CyclicBasis[next2]/.Subscript[s, x___]->Subscript[s2, x],Table[Subscript[MM2, i],{i,1,scales[[2]]//Length}]] (*Update March 16 2025:*);
+If[Length[scales[[1]]]>=Length[scales[[2]]],
 vfirst=v1; dfirst=1;vsecond=v2; dsecond=2;,
 vfirst=v2; dfirst=2;vsecond=v1; dsecond=1;];
-invmassrepls=Map[Rule@@@Reverse,Flatten[#,1]&/@Transpose[{extrepls,intrepls}],2]//Flatten;
+invmassrepls=Map[Rule@@@Reverse,Flatten[#,1]&/@repls,2]//Flatten (*Update March 16 2025:*);
 (*If[SameQ[dominant,0],*);
 sol1=Quiet[Solve[#,vfirst]&/@systemfinal]; (*Linear solve?*);
 posfail1=Flatten[Position[sol1,{}]];
@@ -869,6 +873,7 @@ If[SameQ[solfinal,{}],{edgenode1,{}}, (*trivial symmetry, e.g. a reflection*)
 bestchoice=SortBy[solfinal,Length[#[[2]]]&][[1]] (*Length is not the best criteria, needs to prioritize trivial replacements a->b*);
 If[#[[1]]==2,{edgenode2,#[[2]]},{edgenode1,#[[2]]}]&[bestchoice]]
 ]]]]]]];
+(*########################################################################################################################################################################################################*)
 BestDiagram[objects_]:=BestDiagram[First[objects],Rest[objects]];
 BestDiagram[first_,objects_]:=Module[{best,uncomparables={}},best=first;
 Do[Module[{result=Symmetry[best,objects[[i]]]},Which[result==={},AppendTo[uncomparables,objects[[i]]],result[[1]]===best,Null,result[[1]]===objects[[i]],best=objects[[i]] ]]
@@ -917,21 +922,21 @@ Return[landau0];
 (*A final command that puts everything together:*)
 leadingTerm[f_]:=Module[{s,poly,ord},s=Normal[Series[f,{\[Delta],0,100}]];poly=Expand[s];ord=Exponent[poly,\[Delta],Min];Return[Coefficient[poly,\[Delta],ord]]];
 Options[SOFIASingularities]={
-Reflections->False,LoopEdgesSubtopologies->Automatic,ShowPossiblyDegenerate->False(*True*),ShowHistoryGraph->False(*True,SingOnly*),ShowHistory->False,SymmetriesOn->True,IncludeSubtopologies->True,StartAtSubtopology->1,EndAtSubtopology->-1,DebugOptionUnclog->True,UnclogTime->10^17(*Age of the Universe :-)*),
+LoopEdgesSubtopologies->Automatic,ShowPossiblyDegenerate->False(*True*),ShowHistoryGraph->False(*True,SingOnly*),ShowHistory->False,Symmetries->True(*reflections,False*),IncludeSubtopologies->True,StartAtSubtopology->1,EndAtSubtopology->-1,DebugOptionUnclog->True,UnclogTime->10^17(*Age of the Universe :-)*),
 IncludeISPs->False,Substitutions->{},LoopEdges->Automatic,MaxCut->True,Solver->FastFubini,LaunchJulia->False,SolverBound->100,FiniteFieldsModulus->0,FactorResult->True,PLDMethod->sym,PLDHomogeneous->true,PLDHighPrecision->false,PLDCodimStart->-1,PLDFaceStart->1,PLDRunASingleFace->false
 };
 SOFIASingularities[edgenode_,opts:OptionsPattern[]]:=EchoTiming[Quiet[QuietEcho[Module[
-{ReflectionS,listFeynmanPlots,RunContrActed,contractionS,resultFromSeed,StartAtSubtopOlogy,EndAtSubtopOlogy,deCloG,DebugOptionUnclogTimE,SymmetriesON,symOut,symMap,ShowSingOrigiN,listFeynmanPlots000,ShowSingOrigiNTREE,RecordPossiblyInvaliD,fActorLast},
-{ReflectionS,RecordPossiblyInvaliD,ShowSingOrigiNTREE,ShowSingOrigiN,SymmetriesON,RunContrActed,StartAtSubtopOlogy,EndAtSubtopOlogy,deCloG,DebugOptionUnclogTimE,fActorLast}=OptionValue[{Reflections,ShowPossiblyDegenerate,ShowHistoryGraph,ShowHistory,SymmetriesOn,IncludeSubtopologies,StartAtSubtopology,EndAtSubtopology,DebugOptionUnclog,UnclogTime,FactorResult}];
+{listFeynmanPlots,RunContrActed,contractionS,resultFromSeed,StartAtSubtopOlogy,EndAtSubtopOlogy,deCloG,DebugOptionUnclogTimE,SymmetriesON,symOut,symMap,ShowSingOrigiN,listFeynmanPlots000,ShowSingOrigiNTREE,RecordPossiblyInvaliD,fActorLast},
+{RecordPossiblyInvaliD,ShowSingOrigiNTREE,ShowSingOrigiN,SymmetriesON,RunContrActed,StartAtSubtopOlogy,EndAtSubtopOlogy,deCloG,DebugOptionUnclogTimE,fActorLast}=OptionValue[{ShowPossiblyDegenerate,ShowHistoryGraph,ShowHistory,Symmetries,IncludeSubtopologies,StartAtSubtopology,EndAtSubtopology,DebugOptionUnclog,UnclogTime,FactorResult}];
 contractionS=
 If[SameQ[RunContrActed,False],
 Nothing,
-(Subtopologies[edgenode,ReflectionS])[[StartAtSubtopOlogy;;EndAtSubtopOlogy]]
+(Subtopologies[edgenode,If[SameQ[SymmetriesON,reflections],True,False]])[[StartAtSubtopOlogy;;EndAtSubtopOlogy]]
 ];
-symOut=If[SameQ[SymmetriesON,True],SymmetryQuotient[contractionS]//.{{}}:>{},Null];
-symMap=If[SameQ[SymmetriesON,True],#/.Rule[a_,b_]:>Rule[a,b+\[Delta]]&/@(homogeneizeKin[symOut[[All,2]]]//.Sqrt[aaa_]:>aaa(*//.0:>\[Delta]*)),Null];
+symOut=If[IntersectingQ[{SymmetriesON},{True,reflections}],SymmetryQuotient[contractionS]//.{{}}:>{},Null];
+symMap=If[IntersectingQ[{SymmetriesON},{True,reflections}],#/.Rule[a_,b_]:>Rule[a,b+\[Delta]]&/@(homogeneizeKin[symOut[[All,2]]]//.Sqrt[aaa_]:>aaa),Null];
 symMap0000000=symMap;
-contractionS=If[SameQ[SymmetriesON,True],symOut[[All,1]],contractionS];
+contractionS=If[IntersectingQ[{SymmetriesON},{True,reflections}],symOut[[All,1]],contractionS];
 generatedSubtopologies=contractionS;
 listFeynmanPlots=Table[FeynmanPlot[#1[[iii]][[1]],#1[[iii]][[-1]],Table[jjj,{jjj,Length[#1[[iii]][[1]]]}],FixLoopEdges[#1[[iii]]]],{iii,Length[#1]}]&[contractionS];
 If[IntersectingQ[{ShowSingOrigiNTREE},{True,SingOnly}],listFeynmanPlots000=Table[FeynmanPlot[#1[[iii]][[1]],#1[[iii]][[-1]]],{iii,Length[#1]}]&[contractionS],Null];
@@ -998,8 +1003,8 @@ DynamicModule[
 ];
 ];
 If[IntersectingQ[{ShowSingOrigiNTREE},{True,SingOnly}],
-If[SameQ[SymmetriesON,True],
-Print["Notice: To see the complete history tree, turn off symmetries with SymmetriesOn->False. Alternatively, you can use the combination of options: ShowHistory->True, SymmetriesOn->True."],
+If[IntersectingQ[{SymmetriesON},{True,reflections}],
+Print["Notice: To see the complete history tree, turn off symmetries with Symmetries->False. Alternatively, you can use the combination of options: ShowHistory->True, Symmetries->True."],
 If[SameQ[ShowSingOrigiNTREE,SingOnly],
 Print[
 HistoryGraph[edgenode]//.Table[
@@ -1028,7 +1033,7 @@ Print[
  ]
 ],
 Null];
-res=If[SymmetriesON,
+res=If[IntersectingQ[{SymmetriesON},{True,reflections}](*SymmetriesON*),
   MapThread[
     Function[{elem, sym},
       Flatten[Join[{elem}, {leadingTerm[elem /. sym]}]]
@@ -1071,7 +1076,7 @@ Get[Global`SOFIAoptionEffortlessPath];
 (*SOFIA wrapper for singularities + Effortless:*)
 Options[SOFIA]={
 FindLetters->False,AddSing->{},ChangeVariables->{},IncludeExtraPolynomials->{},DoubleRoots->{},AddLetters->{}(*Format: {{E},{O}}*),
-Reflections->False,LoopEdgesSubtopologies->Automatic,ShowPossiblyDegenerate->(*False*)True,ShowHistoryGraph->False,ShowHistory->False,SymmetriesOn->True,IncludeSubtopologies->True,StartAtSubtopology->1,EndAtSubtopology->-1,DebugOptionUnclog->True,UnclogTime->10^17,
+LoopEdgesSubtopologies->Automatic,ShowPossiblyDegenerate->(*False*)True,ShowHistoryGraph->False,ShowHistory->False,Symmetries->True,IncludeSubtopologies->True,StartAtSubtopology->1,EndAtSubtopology->-1,DebugOptionUnclog->True,UnclogTime->10^17,
 IncludeISPs->False,Substitutions->{},LoopEdges->Automatic,MaxCut->True,Solver->FastFubini,LaunchJulia->False,SolverBound->100,FiniteFieldsModulus->0,FactorResult->True,PLDMethod->sym,PLDHomogeneous->true,PLDHighPrecision->false,PLDCodimStart->-1,PLDFaceStart->1,PLDRunASingleFace->false
 };
 SOFIA[edgenode_,opts:OptionsPattern[]]:=EchoTiming[QuietEcho[Module[{AddLetterS,FindLetterS,sing,AddSIng,runEL,ChangeMyVariAbles,IncludeExtraPolynomialS,ExtraRootS,myEven,myRoots,myOdd,myOdd00},
