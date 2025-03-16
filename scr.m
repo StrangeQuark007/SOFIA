@@ -1138,8 +1138,7 @@ If[$Notebooks,
     "SOFIABaikov: Returns the optimized LBL Baikov representation for an input diagram (list of edges and nodes).",
     "SOFIA: Returns the singularities or letters depending on options.",
     "SOFIADecomposeAlphabet: SOFIADecomposeAlphabet[LetterToDecompose,SymbolData] - decomposes the letter LetterToDecompose in terms of the alphabet provided in SymbolData.",
-    "SolvePolynomialSystem: Solves a polynomial system using the method specified by Solver->{FastFubini, momentumPLD} option.",
-    "HistoryGraph: Displays the history of parent and chidren subtopologies."
+    "SolvePolynomialSystem: Solves a polynomial system using the method specified by Solver->{FastFubini, momentumPLD} option."
 }, 
     Spacings -> 0.7
   ];
