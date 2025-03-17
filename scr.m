@@ -13,6 +13,7 @@
 
 
 BeginPackage["SOFIA`"]
+(*------------------------------------------------------------*)
 (*Documentation:*)
 active::usage = "A list of active (integration) variables.";
 \[Alpha]::usage = "The standard Schwinger parameter.";
@@ -25,11 +26,12 @@ FastFubini::usage = "Eliminates given variables in a set of polynomials. Availab
 Fubini::usage = " ";
 RunningFubini::usage = " ";
 FeynmanDraw::usage = "Opens a drawing window where you can sketch a diagram with your mouse. The output is the corresponding list of edges and nodes.";
-FeynmanPlot::usage = "Draws the input diagram.";
+FeynmanPlot::usage = "Plots the input diagram.";
 finalEdgeMom::usage = "A list of edge momenta chosen by SOFIABaikov, minimizing the number of integration variables.";
 FixLoopEdges::usage = "Finds an 'optimal' labeling of loop momenta.";
 GenerateKinematics::usage = "Generates n-point kinematics.";
 gramList::usage = "A list of determinants of matrices.";
+generatedSubtopologies::usage = "Global variables used by SOFIA[] to list subtopologies.";
 HistoryGraph::usage = "Displays the history of parent and child subtopologies.";
 homogeneizeKin::usage = "Homogenizes kinematics.";
 IdentifyTheLoops::usage = "Finds edges contributing to each loop, treating them as simple cycles.";
@@ -55,6 +57,7 @@ prefactor::usage = "The constant prefactor of the loop-by-loop integrand output 
 ProportionalPolynomialsQ::usage = "Checks whether two polynomials are equal up to an overall constant.";
 q::usage = "A dummy label for edge loop momenta.";
 r::usage = "A letter used by Effortless to denote a root.";
+reflections::usage = "Symmetries option in SOFIA[].";
 s::usage = "A label for Mandelstam variables.";
 shift::usage = "The shifted loop momenta.";
 SingOnly::usage = "A dummy variable.";
@@ -77,10 +80,9 @@ W::usage = "A letter used by Effortless to denote a rational logarithmic entry."
 wedge1::usage = "The first rule to deal with wedge products.";
 wedge2::usage = "The second rule to deal with wedge products.";
 xsExpanded::usage = "A list of the Baikov variables used by SOFIABaikov[].";
-\[Delta]::usage = "An expansion parameter.";
-generatedSubtopologies::usage = " ";
-reflections::usage = " ";
+\[Delta]::usage = "A globally defined expansion parameter.";
 
+(*------------------------------------------------------------*)
 (*Initiate package:*)
 Begin["`Private`"]
 Print["Singularities of Feynman Integrals Automatized (v1.0.0.)"];
@@ -98,8 +100,10 @@ oo     .d8P `88b    d88'  888          888   .8'     `888.
   ]
 ];
 
+(*------------------------------------------------------------*)
 <<"GraphUtilities`";
 
+(*------------------------------------------------------------*)
 (*Lorentz rules and exterior algebra:*)
 Clear[Wedge,d,CenterDot];
 SetAttributes[CenterDot,Orderless];
@@ -128,6 +132,7 @@ d[x_]:>((Sum[D[x,vars[[i]]]d[vars[[i]]],{i,1,Length[vars]}]))
 };
 Applyd[exp_,vars_]:=exp//.Applyd[vars]//.wedge1//.wedge2;
 
+(*------------------------------------------------------------*)
 (*n-point kinematic:*)
 Clear[GenerateKinematics];
 GenerateKinematics[nParticles_]:=
@@ -145,6 +150,7 @@ out=substitutions
 ]
 ];
 
+(*------------------------------------------------------------*)
 (*Feynman diagrammatic:*)
 FeynmanDraw:=Module[{edgelist,edgelist2,extnodes,posnodes,nodes0,edgelist3,vertices,ivertices,reordering,intmasses,allEdges,nodes1,edgelistfinal,edges,nodes,en},
 edgelist=GraphUtilities`GraphEdit[][[2,2]];
@@ -271,6 +277,7 @@ DeleteDuplicates[{{SortBy[#[[1]],Length],#[[-1]]}&/@(#[[1]]),#[[-1]]}&/@Contract
 DeleteDuplicates[{{SortBy[#[[1]],Length],#[[-1]]}&/@(#[[1]]),#[[-1]]}&/@ContractionsR[edgenode]]
 ]
 ,"Constructing subtopologies..."];
+(*------------------------------------------------------------*)
 
 (*Diagram display:*)
 FeynmanPlot[x_]:=FeynmanPlot[x[[1]],x[[2]]];
@@ -351,6 +358,7 @@ GraphPlot[graph,
   ] // Normal
 ]
 ];
+(*------------------------------------------------------------*)
 
 (*FastFubini and helper functions:*)
 MyFactorList[list_]:=Select[DeleteDuplicates[Flatten[Map[FactorList[#][[All,1]]&,list]]],!NumericQ[#]&];
@@ -454,6 +462,7 @@ Intersection[runningResult,current,SameTest->(ProportionalPolynomialsQ[#1,#2,10,
 Return[runningResult];
 ];
 
+(*------------------------------------------------------------*)
 (*FixingLoopEdges and helper functions:*)
 normalizeEdge[UndirectedEdge[a_,b_,w_]]:=UndirectedEdge[Min[a,b],Max[a,b],w];
 FirstUniqueOnePositions[matrix_]:=Module[{trimmed,zeroCols,positions},
@@ -498,6 +507,7 @@ SortBy[Map[Append[#,Total[#]]&,inCycleMatrix],Last]
 Return[pos];
 ]];
 
+(*------------------------------------------------------------*)
 (*Extra helper functions:*)
 SetAttributes[timed,HoldAll];
 timed[expr_]:=With[{start=AbsoluteTime[]},PrintTemporary@Dynamic[Row[{"Time elapsed: ",AbsoluteTime[]-start}],UpdateInterval->0.1];
@@ -522,6 +532,7 @@ filteredList[list_]:=Module[{seenAis={}},Select[list,Function[entry,With[{aTerms
 nlbl[loop_,listE_]:=loop+(Plus@@listE);
 homogeneizeKin[arg_]:=arg//.Subscript[s, a___]:>ToExpression["s"<>StringJoin[ToString/@{a}]]//.Subscript[M, i_]:>Sqrt[ToExpression["MM"<>ToString[i]]]//.Subscript[m, i_]:>Sqrt[ToExpression["mm"<>ToString[i]]]//.M:>Sqrt[MM]//.m:>Sqrt[mm];
 
+(*------------------------------------------------------------*)
 (*SOFIABaikov:*)
 rankDropRule[OUT_]:=Module[{},
 temp1=#[[1]]&/@OUT;
@@ -753,6 +764,7 @@ maxcut=1/(2Pi I)^Length[propsX] (((Times@@propsX)(integrand/.\[Nu]Map/.Join[{\[N
 Return[Echo[maxcut,"Maximal cut LBL Baikov = "]];
 ]];
 
+(*------------------------------------------------------------*)
 (*Prepare the singularity system:*)
 prepareLandauSystem[Edges_,Nodes_,MomLabel_,optionMaxCut_,optionJulia_]:=Module[{inutile1,inutile2,inutile3,Glist,GlistOS,listOfDet},
 inutile1=QuietEcho[SOFIABaikov[Edges,Nodes,LoopEdges->MomLabel,ShowXs->False,ShowDetailedDiagram->False]];
@@ -765,9 +777,9 @@ inutile3=If[SameQ[optionJulia,True],QuietEcho[sendSystemToJulia[gramList]],{}];
 Return[gramList];
 ];
 
+(*------------------------------------------------------------*)
 (*Symmetries:*)
 Clear[Symmetry];
-(*########################################################################################################################################################################################################*)
 Symmetry[edgenode1_,edgenode2_]:= Symmetry[edgenode1,edgenode2]=Module[{f,massorganizer,edges1,edges2,edgelist1,edgelist2,multiedgepos1,multiedgepos2,color1,color2,simpleedge1,simplegraph1,simpleedge2,simplegraph2,vertexrule,simpleedge1to2,edgepos1to2,intmass1to2,symmetries1to2,multisymmetries1to2,masses1to2,masses1to2b,masses1to2c,sym,multisymmetries1to2b,EnoughScalesQ,multisymmetries1to2c,vtomomenta,vtoM,massrepls,massmomorganizer,momrepls,Mext2to1,mint2to1,multisymmetries1to2d,next1,next2,kinematics1,kinematics2,intermediate2,intermediate1,CyclicBasis,intermom12,intermom12b,p1s,p2s,s1s,s2s,s1to2,extmasses,bestchoice , dominant, finalrepls,nodes1,nodes2,intmass1,intmass2,multi,multisymmetries1to2g,interfinal,dominant2,multisinglerepls,extscales,extmassesr,intscales,intmasses,intmassesr,extrepls,nodes1r,nodes2r,intrepls,Mext2to1b,Mext2to1final,mint2to1b,mint2to1final,system,systemfinal,v1,v2,vfirst,vsecond,invmassrepls,sol1,sol2,sol21,sol22,sol31,sol32,solfinal1,solfinal2,posfail1,soltrue1,soltrue2,dfirst,dsecond,solfinal,false},
 edges1=edgenode1[[1]];nodes1=edgenode1[[2]]; edges2=edgenode2[[1]];nodes2=edgenode2[[2]];
 If[UnsameQ[Length[edges1],Length[edges2]], (*checks immediately if number of edges is the same*)
@@ -873,7 +885,6 @@ If[SameQ[solfinal,{}],{edgenode1,{}}, (*trivial symmetry, e.g. a reflection*)
 bestchoice=SortBy[solfinal,Length[#[[2]]]&][[1]] (*Length is not the best criteria, needs to prioritize trivial replacements a->b*);
 If[#[[1]]==2,{edgenode2,#[[2]]},{edgenode1,#[[2]]}]&[bestchoice]]
 ]]]]]]];
-(*########################################################################################################################################################################################################*)
 BestDiagram[objects_]:=BestDiagram[First[objects],Rest[objects]];
 BestDiagram[first_,objects_]:=Module[{best,uncomparables={}},best=first;
 Do[Module[{result=Symmetry[best,objects[[i]]]},Which[result==={},AppendTo[uncomparables,objects[[i]]],result[[1]]===best,Null,result[[1]]===objects[[i]],best=objects[[i]] ]]
@@ -890,6 +901,7 @@ SymmetryQuotient0[objects_]:= Module[{i,out,diagrams},i=1; diagrams=BestDiagram3
 Table[{diagrams[[i,1]],Symmetry[diagrams[[i,1]],#][[2]]&/@diagrams[[i,2]]},{i,1,diagrams//Length}]];
 SymmetryQuotient[objects_]:= {#[[1]],DeleteDuplicates[#[[2]]]}&/@ SymmetryQuotient0[objects];
 
+(*------------------------------------------------------------*)
 (*SOFIASingularities:*)
 (*This command can be used to setup the Landau analysis with many options:*)
 Options[SOFIASingularitiesSEED]={IncludeISPs->False,Substitutions->{},LoopEdges->Automatic,MaxCut->True,Solver->FastFubini,LaunchJulia->False,SolverBound->100,FiniteFieldsModulus->0,FactorResult->True,PLDMethod->sym,PLDHomogeneous->true,PLDHighPrecision->false,PLDCodimStart->-1,PLDFaceStart->1,PLDRunASingleFace->false};
@@ -899,8 +911,8 @@ lImit=If[SameQ[lImit,Infinity],10^200,lImit];
 (*Make a choice of edge labels:*)
 momLabel=If[SameQ[EdgeLabels,Automatic],Echo[FixLoopEdges[edgenode],"Choice of loop edges made by the code:"],EdgeLabels]//QuietEcho;
 (*Prepare the system of equations needed to find Landau singularities:*)
-prepareLandauSystem[edgenode[[1]],edgenode[[-1]],momLabel,MaximalCut,(*RunJulia:*)True];
-(*Delete constant Gram determinants [including zero!]:*)
+prepareLandauSystem[edgenode[[1]],edgenode[[-1]],momLabel,MaximalCut,True];
+(*Delete constant Gram determinants:*)
 gramList=Select[gramList,!NumericQ[#]&];
 (*Solve the system of equations:*)
 Echo[TableForm[Factor[gramList]],"List of the Gram determinants:"];
@@ -919,10 +931,14 @@ active
 ];
 Return[landau0];
 ];
+
 (*A final command that puts everything together:*)
-leadingTerm[f_]:=Module[{s,poly,ord},s=Normal[Series[f,{\[Delta],0,100}]];poly=Expand[s];ord=Exponent[poly,\[Delta],Min];Return[Coefficient[poly,\[Delta],ord]]];
+leadingTerm[f_] := Module[{coeffs},
+  coeffs = If[!FreeQ[f,\[Delta]],#[[1]]&/@Flatten[CoefficientList[f, \[Delta]],1],f];
+Return[coeffs];
+];
 Options[SOFIASingularities]={
-LoopEdgesSubtopologies->Automatic,ShowPossiblyDegenerate->False(*True*),ShowHistoryGraph->False(*True,SingOnly*),ShowHistory->False,Symmetries->True(*reflections,False*),IncludeSubtopologies->True,StartAtSubtopology->1,EndAtSubtopology->-1,DebugOptionUnclog->True,UnclogTime->10^17(*Age of the Universe :-)*),
+LoopEdgesSubtopologies->Automatic,ShowPossiblyDegenerate->False,ShowHistoryGraph->False(*:True,SingOnly*),ShowHistory->False,Symmetries->True(*:reflections,False*),IncludeSubtopologies->True,StartAtSubtopology->1,EndAtSubtopology->-1,DebugOptionUnclog->True,UnclogTime->10^17,
 IncludeISPs->False,Substitutions->{},LoopEdges->Automatic,MaxCut->True,Solver->FastFubini,LaunchJulia->False,SolverBound->100,FiniteFieldsModulus->0,FactorResult->True,PLDMethod->sym,PLDHomogeneous->true,PLDHighPrecision->false,PLDCodimStart->-1,PLDFaceStart->1,PLDRunASingleFace->false
 };
 SOFIASingularities[edgenode_,opts:OptionsPattern[]]:=EchoTiming[Quiet[QuietEcho[Module[
@@ -1026,25 +1042,25 @@ Print[
      "Corresponding singularities for ",
      listFeynmanPlots[[ii]],
      " : ",
-     TableForm[DeleteCases[Select[DeleteDuplicates[Flatten[FactorList[#][[All,1]]&/@res[[ii]]],ProportionalPolynomialsQ[#1,#2,20,0]&],!NumericQ[#]&],Alternatives@@{Det[___],{}[[-1]]}]]
+     TableForm[DeleteCases[Select[DeleteDuplicates[Flatten[FactorList[#][[All,1]]&/@res[[ii]]],ProportionalPolynomialsQ[#1,#2,20,0]&],!NumericQ[#]&],Alternatives@@{Det[___],{}[[1]],{}[[-1]]}]]
    }],
    {ii, Length[res]}
   ]
  ]
 ],
 Null];
-res=If[IntersectingQ[{SymmetriesON},{True,reflections}](*SymmetriesON*),
+res=If[IntersectingQ[{SymmetriesON},{True,reflections}],
   MapThread[
     Function[{elem, sym},
-      Flatten[Join[{elem}, {leadingTerm[elem /. sym]}]]
+      Flatten[Join[{elem}, {leadingTerm[elem /.sym]}]]
     ],
     {res, symMap}
   ],
   res
 ];
 DeleteCases[Select[DeleteDuplicates[Flatten[
-If[SameQ[fActorLast,True],FactorList[#][[All,1]]&/@Flatten[res],Flatten[res]]
-],ProportionalPolynomialsQ[#1,#2,(*20*)3,0]&],!NumericQ[#]&],Alternatives@@{Det[___],{}[[-1]]}]
+If[SameQ[fActorLast,True],Monitor[FactorList[#][[All,1]]&/@Flatten[res],"Factoring the final results..."],Flatten[res]]
+],ProportionalPolynomialsQ[#1,#2,(*20*)3,0]&],!NumericQ[#]&],Alternatives@@{Det[___],{}[[-1]],{}[[1]]}]
 ]];
 If[SameQ[RunContrActed,False],
 If[SameQ[mzFLAG,True],
@@ -1070,9 +1086,11 @@ SortBy[sOlver[SortBy[polynomials,Length],variables,lImit,mOdulus,fActorLast],Lea
 Return[sol0];
 ];
 
+(*------------------------------------------------------------*)
 (*Effortless:*)
 Get[Global`SOFIAoptionEffortlessPath];
 
+(*------------------------------------------------------------*)
 (*SOFIA wrapper for singularities + Effortless:*)
 Options[SOFIA]={
 FindLetters->False,AddSing->{},ChangeVariables->{},IncludeExtraPolynomials->{},DoubleRoots->{},AddLetters->{}(*Format: {{E},{O}}*),
@@ -1105,7 +1123,6 @@ Flatten[Table[Sqrt[#1[[1]][[i]]]*Sqrt[#1[[2]][[j]]],{i,Length[#1[[1]]]},{j,Lengt
 Sqrt[sing]]],!FreeQ[#,Sqrt[___]]&]
 ];
 PrintTemporary["List of square roots and rational entries:",myRoots];
-Print[myRoots];
 If[SameQ[Global`SOFIAoptionFiniteFlow,True],Print["SOFIA is using FiniteFlow. If an error occurs, try changing SOFIAoptionFiniteFlow=False."];,Print["SOFIA is not using FiniteFlow."];];
 myOdd00=If[SameQ[Global`SOFIAoptionFiniteFlow,True],
 Effortless`RunEffortlessIndependentFF[myRoots[[All,1]],myEven,myRoots,Variables[sing],"DoubleSquareRoots"->True,"Verbose"->False],
@@ -1132,6 +1149,7 @@ PrintTemporary[OUT[DOING]=If[SameQ[solRe,{}],ImpossibleToDecomposeLetter,Thread[
 Return[Flatten[Table[OUT[DOING],{DOING,Length[AlphabetToDecompose]}]]];
 ];
 
+(*------------------------------------------------------------*)
 (*End package:*)
 Print["Copyright \[Copyright] 2025 Miguel Correia, Mathieu Giroux, and Sebastian Mizera. All rights reserved."];
 If[$Notebooks, 
@@ -1139,11 +1157,14 @@ If[$Notebooks,
   Print @ Column[
     {
     "FeynmanDraw: Running this function will trigger a drawing window, allowing you to draw your diagram with your mouse. The output is the corresponding list of edges and nodes for the diagram.",
-    "FeynmanPlot: Draws the input diagram.",
+    "FeynmanPlot: Plots the input diagram.",
     "SOFIABaikov: Returns the optimized LBL Baikov representation for an input diagram (list of edges and nodes).",
     "SOFIA: Returns the singularities or letters depending on options.",
     "SOFIADecomposeAlphabet: SOFIADecomposeAlphabet[LetterToDecompose,SymbolData] - decomposes the letter LetterToDecompose in terms of the alphabet provided in SymbolData.",
-    "SolvePolynomialSystem: Solves a polynomial system using the method specified by Solver->{FastFubini, momentumPLD} option."
+    "SolvePolynomialSystem: Solves a polynomial system using the method specified by Solver->{FastFubini, momentumPLD} option.",
+    "Subtopologies: Generates non-trivial subtopologies.",
+    "SymmetryQuotient: Given a list of diagrams, returns a reduced list of diagrams with a symmetry map."
+    
 }, 
     Spacings -> 0.7
   ];
