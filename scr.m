@@ -82,6 +82,8 @@ wedge2::usage = "The second rule to deal with wedge products.";
 xsExpanded::usage = "A list of the Baikov variables used by SOFIABaikov[].";
 \[Delta]::usage = "A globally defined expansion parameter.";
 
+skipInd::usage = ".......";
+
 (*------------------------------------------------------------*)
 (*Initiate package:*)
 Begin["`Private`"]
@@ -1014,7 +1016,7 @@ DynamicModule[
       ]
     }]
   ];
-  If[SameQ[skippedIndices,{}],Null,Print["Final Skipped Indices: ", skippedIndices]];
+  If[SameQ[skippedIndices,{}],skipInd={};Null,Print["Final Skipped Indices: ", skippedIndices];skipInd=skippedIndices;];
   If[SameQ[mzFLAGlist,{}],Null,Print[Style["The maximal cut integration contour of the (sub)topologies at position(s) '"<>ToString[mzFLAGlist]<>"' in the internally generated list 'generatedSubtopologies' may be degenerate. In case of doubt, we advise running the singularity analysis on each diagram alone adjusting the LoopEdges -> {...} or MaxCut -> False options to make sure it is complete.", Bold, Orange]]];
 ];
 ];
@@ -1054,7 +1056,7 @@ res=If[IntersectingQ[{SymmetriesON},{True,reflections}],
     Function[{elem, sym},
       Flatten[Join[{elem}, {leadingTerm[elem /.sym]}]]
     ],
-    {res, symMap}
+    {res,  If[SameQ[skipInd,{}],symMap,Delete[symMap,{#1}&/@skipInd]]}(*<-modified.*)
   ],
   res
 ];
