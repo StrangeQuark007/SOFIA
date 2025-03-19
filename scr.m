@@ -942,7 +942,7 @@ Options[SOFIASingularities]={
 LoopEdgesSubtopologies->Automatic,ShowPossiblyDegenerate->False,ShowHistoryGraph->False(*:True,SingOnly*),ShowHistory->False,Symmetries->True(*:reflections,False*),IncludeSubtopologies->True,StartAtSubtopology->1,EndAtSubtopology->-1,DebugOptionUnclog->True,UnclogTime->10^17,
 IncludeISPs->False,Substitutions->{},LoopEdges->Automatic,MaxCut->True,Solver->FastFubini,LaunchJulia->False,SolverBound->100,FiniteFieldsModulus->0,FactorResult->True,PLDMethod->sym,PLDHomogeneous->true,PLDHighPrecision->false,PLDCodimStart->-1,PLDFaceStart->1,PLDRunASingleFace->false
 };
-SOFIASingularities[edgenode_,opts:OptionsPattern[]]:=EchoTiming[Quiet[QuietEcho[Module[
+SOFIASingularities[edgenode_,opts:OptionsPattern[]]:=EchoTiming[timed[Quiet[QuietEcho[Module[
 {listFeynmanPlots,RunContrActed,contractionS,resultFromSeed,StartAtSubtopOlogy,EndAtSubtopOlogy,deCloG,DebugOptionUnclogTimE,SymmetriesON,symOut,symMap,ShowSingOrigiN,listFeynmanPlots000,ShowSingOrigiNTREE,RecordPossiblyInvaliD,fActorLast},
 {RecordPossiblyInvaliD,ShowSingOrigiNTREE,ShowSingOrigiN,SymmetriesON,RunContrActed,StartAtSubtopOlogy,EndAtSubtopOlogy,deCloG,DebugOptionUnclogTimE,fActorLast}=OptionValue[{ShowPossiblyDegenerate,ShowHistoryGraph,ShowHistory,Symmetries,IncludeSubtopologies,StartAtSubtopology,EndAtSubtopology,DebugOptionUnclog,UnclogTime,FactorResult}];
 contractionS=
@@ -962,7 +962,7 @@ If[Position[{opts},momentumPLD]=={},
 SortBy[#1,LeafCount[#1]&],#1]&[
 If[SameQ[RunContrActed,False],
 SOFIASingularitiesSEED[edgenode,FilterRules[{opts},Options[SOFIASingularitiesSEED]]],
-timed[
+(*timed[*)
 DynamicModule[
   {i = 0, mzFLAGlist = {}, skippedIndices = {},diagTemp={listFeynmanPlots[[1]]}, maxTime = DebugOptionUnclogTimE, declog = deCloG},
   res = Monitor[
@@ -1018,7 +1018,7 @@ DynamicModule[
   If[SameQ[skippedIndices,{}],skipInd={};Null,Print["Skipped over subtopologies in 'generatedSubtopologies' at positions:", skippedIndices];skipInd=skippedIndices;];
   If[SameQ[mzFLAGlist,{}],Null,Print[Style["The maximal cut integration contour of the (sub)topologies at position(s) '"<>ToString[mzFLAGlist]<>"' in the internally generated list 'generatedSubtopologies' may be degenerate. In case of doubt, we advise running the singularity analysis on each diagram alone adjusting the LoopEdges -> {...} or MaxCut -> False options to make sure it is complete.", Bold, Orange]]];
 ];
-];
+(*];*)
 If[IntersectingQ[{ShowSingOrigiNTREE},{True,SingOnly}],
 If[IntersectingQ[{SymmetriesON},{True,reflections}],
 Print["Notice: To see the complete history tree, turn off symmetries with Symmetries->False. Alternatively, you can use the combination of options: ShowHistory->True, Symmetries->True."],
@@ -1070,11 +1070,11 @@ Null],
 Null
 ];
 Return[resultFromSeed];
-]]]];
+]]]]];
 Options[SolvePolynomialSystem]={
 Solver->FastFubini,LaunchJulia->False,SolverBound->100,FiniteFieldsModulus->0,FactorResult->True,PLDMethod->sym,PLDHomogeneous->true,PLDHighPrecision->false,PLDCodimStart->-1,PLDFaceStart->1,PLDRunASingleFace->false
 };
-SolvePolynomialSystem[polynomials_,variables_,opts:OptionsPattern[]]:=SolvePolynomialSystem[polynomials,variables,opts]=Module[
+SolvePolynomialSystem[polynomials_,variables_,opts:OptionsPattern[]]:=SolvePolynomialSystem[polynomials,variables,opts]=EchoTiming[Module[
 {sOlver,RunJulia,lImit,mOdulus,fActorLast,PLDmethOd,PLDhOm,PLDhP,PLDcodimStaRt,PLDfaceStaRt,PLDsingleFaCe,sol0},
 {sOlver,RunJulia,lImit,mOdulus,fActorLast,PLDmethOd,PLDhOm,PLDhP,PLDcodimStaRt,PLDfaceStaRt,PLDsingleFaCe}=OptionValue[{Solver,LaunchJulia,SolverBound,FiniteFieldsModulus,FactorResult,PLDMethod,PLDHomogeneous,PLDHighPrecision,PLDCodimStart,PLDFaceStart,PLDRunASingleFace}];
 lImit=If[SameQ[lImit,Infinity],10^200,lImit];
@@ -1085,7 +1085,7 @@ momentumPLD[SortBy[polynomials,Length],PLDmethOd,PLDhOm,PLDhP,PLDcodimStaRt,PLDf
 SortBy[sOlver[SortBy[polynomials,Length],variables,lImit,mOdulus,fActorLast],LeafCount[#]&]
 ];
 Return[sol0];
-];
+],"Total runtime="];
 
 (*------------------------------------------------------------*)
 (*Effortless:*)
