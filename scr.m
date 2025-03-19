@@ -61,6 +61,7 @@ reflections::usage = "Symmetries option in SOFIA[].";
 s::usage = "A label for Mandelstam variables.";
 shift::usage = "The shifted loop momenta.";
 SingOnly::usage = "A dummy variable.";
+skipInd::usage = "Skipped indices in SOFIA[].";
 SOFIA::usage = "Returns the singularities or letters depending on options.";
 SOFIABaikov::usage = "Returns the optimized LBL Baikov representation for an input diagram (list of edges and nodes).";
 SOFIADecomposeAlphabet::usage = "SOFIADecomposeAlphabet[LetterToDecompose,SymbolData] - decomposes the letter LetterToDecompose in terms of the alphabet provided in SymbolData.";
@@ -81,8 +82,6 @@ wedge1::usage = "The first rule to deal with wedge products.";
 wedge2::usage = "The second rule to deal with wedge products.";
 xsExpanded::usage = "A list of the Baikov variables used by SOFIABaikov[].";
 \[Delta]::usage = "A globally defined expansion parameter.";
-
-skipInd::usage = ".......";
 
 (*------------------------------------------------------------*)
 (*Initiate package:*)
@@ -1011,12 +1010,12 @@ DynamicModule[
       Dynamic[Row[{"Subtopology ", i, " of ", Length[contractionS]}]],
       Dynamic[Last[diagTemp]],
       If[!SameQ[10^17,DebugOptionUnclogTimE], 
-        Dynamic[Style["Unclogging: Skipped over subtopologies " <> ToString[skippedIndices], Red]], 
+        Dynamic[Style["Skipped over subtopologies at positions:" <> ToString[skippedIndices], Red]], 
         Nothing
       ]
     }]
   ];
-  If[SameQ[skippedIndices,{}],skipInd={};Null,Print["Final Skipped Indices: ", skippedIndices];skipInd=skippedIndices;];
+  If[SameQ[skippedIndices,{}],skipInd={};Null,Print["Skipped over subtopologies in 'generatedSubtopologies' at positions:", skippedIndices];skipInd=skippedIndices;];
   If[SameQ[mzFLAGlist,{}],Null,Print[Style["The maximal cut integration contour of the (sub)topologies at position(s) '"<>ToString[mzFLAGlist]<>"' in the internally generated list 'generatedSubtopologies' may be degenerate. In case of doubt, we advise running the singularity analysis on each diagram alone adjusting the LoopEdges -> {...} or MaxCut -> False options to make sure it is complete.", Bold, Orange]]];
 ];
 ];
