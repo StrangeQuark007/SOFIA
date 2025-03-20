@@ -1306,7 +1306,7 @@ If[$Notebooks,
   Print @ Column[
     {
     "FeynmanDraw: Running this function will trigger a drawing window, allowing you to draw your diagram with your mouse. The output is the corresponding list of edges and nodes for the diagram.",
-    "FeynPlot: Plots the input diagram.",
+    "FeynmanPlot: Plots the input diagram.",
     "SOFIABaikov: Returns the optimized LBL Baikov representation for an input diagram (list of edges and nodes).",
     "SOFIA: Returns the singularities or letters depending on options.",
     "SOFIADecomposeAlphabet: SOFIADecomposeAlphabet[LetterToDecompose,SymbolData] - decomposes the letter LetterToDecompose in terms of the alphabet provided in SymbolData.",
