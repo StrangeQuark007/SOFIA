@@ -3,6 +3,8 @@ This is the GitHub repository where the Mathematica package SOFIA (Singularities
 
 Please find the user manual at: arXiv:2503.xxxxx.
 
+All you need to clone locally is the SOFIA.zip file; within it, you'll find the notebook containing multiple worked-out examples.
+
 For questions or comments, feel free to email any of the authors or the page maintainer at mathieu.giroux2@mail.mcgill.ca.
 
 ---
