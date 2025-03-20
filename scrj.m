@@ -81,6 +81,38 @@ xsExpanded::usage = "A list of the Baikov variables used by SOFIABaikov[].";
 \[Delta]::usage = "A globally defined expansion parameter.";
 \[Mu]::usage = "Mass-squared scale.";
 
+(*Options:*)
+FindLetters::usage = "SOFIA option.";
+MaxCut::usage = "SOFIA option.";
+IncludeSubtopologies::usage = "SOFIA option.";
+Symmetries::usage = "SOFIA option.";
+SolverBound::usage = "SOFIA option.";
+IncludeISPs::usage = "SOFIA option.";
+LoopEdges::usage = "SOFIA option.";
+ShowPossiblyDegenerate::usage = "SOFIA option.";
+ShowHistoryGraph::usage = "SOFIA option.";
+UnclogTime::usage = "SOFIA option.";
+StartAtSubtopology::usage = "SOFIA option.";
+EndAtSubtopology::usage = "SOFIA option.";
+Substitutions::usage = "SOFIA option.";
+Solver::usage = "SOFIA option.";
+FactorResult::usage = "SOFIA option.";
+PLDMethod::usage = "SOFIA option.";
+PLDHomogeneous::usage = "SOFIA option.";
+PLDHighPrecision::usage = "SOFIA option.";
+PLDCodimStart::usage = "SOFIA option.";
+PLDFaceStart::usage = "SOFIA option.";
+PLDRunASingleFace::usage = "SOFIA option.";
+AddSing::usage = "SOFIA option.";
+DoubleRoots::usage = "SOFIA option.";
+AddLetters::usage = "SOFIA option.";
+Dimension::usage = "SOFIA option.";
+ShowXs::usage = "SOFIA option.";
+ShowDetailedDiagram::usage = "SOFIA option.";
+EdgeLabels::usage = "SOFIA option.";
+HighlightedEdges::usage = "SOFIA option.";
+Reflections::usage = "SOFIA option.";
+
 Print["Singularities of Feynman Integrals Automatized (v1.0.0.)"];
 Print[
   Style["
