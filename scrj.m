@@ -13,7 +13,6 @@
 
 
 (*Documentation:*)
-(*Documentation:*)
 active::usage = "A list of active (integration) variables.";
 \[Alpha]::usage = "The standard Schwinger parameter.";
 Applyd::usage = "Expands the exterior derivative d[...] in the specified variables.";
