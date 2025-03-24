@@ -11,6 +11,23 @@ For questions or comments, feel free to email any of the authors or the page mai
 
 ---
 
+### Citation
+
+If you use SOFIA, please cite the reference:
+```ruby
+@article{Correia:2025yao,
+    author = "Correia, Miguel and Giroux, Mathieu and Mizera, Sebastian",
+    title = "{\texttt{SOFIA}: Singularities of Feynman Integrals Automatized}",
+    eprint = "2503.16601",
+    archivePrefix = "arXiv",
+    primaryClass = "hep-th",
+    month = "3",
+    year = "2025"
+}
+```
+
+---
+
 ### MIT License  
 
 Copyright © 2025 Miguel Correia, Mathieu Giroux, and Sebastian Mizera. All rights reserved.  
