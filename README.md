@@ -1,7 +1,7 @@
 ### SOFIA-Singularities-Of-Feynman-Integrals-Automatized: V1.0.0
 This GitHub repository hosts the Mathematica package **“SOFIA: Singularities of Feynman Integrals Automatized”** by Miguel Correia, Mathieu Giroux, and Sebastian Mizera.
 
-The user manual is available at [arXiv:2503.16601](https://arxiv.org/abs/2503.16601).
+The user manual is available at [arXiv:2503.16601](https://arxiv.org/abs/2503.16601). A running version is maintained here under "manual.pdf".
 
 To clone the repository locally, simply download the **SOFIA.zip** file. Inside, you will find the notebook SOFIA_examples.nb with several worked-out examples.
 
