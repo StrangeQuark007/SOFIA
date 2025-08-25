@@ -24,6 +24,7 @@ FastFubini::usage = "Eliminates given variables in a set of polynomials. Availab
 FeynmanDraw::usage = "Opens a drawing window where you can sketch a diagram with your mouse. The output is the corresponding list of edges and nodes.";
 FeynmanPlot::usage = "Plots the input diagram.";
 finalEdgeMom::usage = "A list of edge momenta chosen by SOFIABaikov, minimizing the number of integration variables.";
+FixLoopEdgesMEF::usage = "Finds an 'optimal' labeling of loop momenta (only stable for diagrams without multi-edges).";
 FixLoopEdges::usage = "Finds an 'optimal' labeling of loop momenta.";
 GenerateKinematics::usage = "Generates n-point kinematics.";
 gramList::usage = "A list of determinants of matrices.";
@@ -505,8 +506,10 @@ Return[runningResult];
 ];
 
 (*------------------------------------------------------------*)
+(*Modified August 2025:*)
 (*FixingLoopEdges and helper functions:*)
 normalizeEdge[UndirectedEdge[a_,b_,w_]]:=UndirectedEdge[Min[a,b],Max[a,b],w];
+RemoveZeroRowMatrices[list_]:=Select[list,FreeQ[#,ConstantArray[0,Length[First[#]]]]&]
 FirstUniqueOnePositions[matrix_]:=Module[{trimmed,zeroCols,positions},
 trimmed=matrix[[All,1;;-2]];
 zeroCols=Position[Total[trimmed,{1}],1][[All,1]];
@@ -514,7 +517,13 @@ positions=Table[SelectFirst[Range[Length[trimmed[[i]]]],MemberQ[zeroCols,#]&&tri
 positions];
 CycleToIndicator[cycle_,edgelist_]:=Boole[MemberQ[cycle,#]&/@edgelist];
 addedges[edges_]:=Cases[Tally[Flatten[edges],Sort[#1]===Sort[#2]&],{e_,_?OddQ}:>e];
-FixLoopEdges[edgesnodes_]:=QuietEcho[Module[{NOLOOPS,tempCycleMatrices,inCycleMatrix,edgesin,nodesin,pos,cycles0,(*cycles1, cycles2, cycles3,*)cycles(*,OUT*),edges,nodes,edgelist,vertices,intmasses,extmasses,vmax,masslessedges,masslesspos,vmasslesspos,allEdges,multiplicity,graph0,edgelistgraph,graph,ContactQ},
+keepFirstNSingletons[list_,n_]:=Delete[list,List/@Drop[Flatten@Position[list,{_}],n]];
+orderByAppearance[list_,ref_]:=Module[{flat,pos,ranks},flat=DeleteDuplicates@Flatten@ref;
+pos=AssociationThread[flat,Range@Length@flat];
+ranks=MapIndexed[{Lookup[pos,#1,Infinity],#2[[1]]}&,list];
+list[[OrderingBy[ranks,Identity]]]];
+(*Main function that handels well graphs with multi-edges stripped:*)
+FixLoopEdgesMEF[edgesnodes_]:=QuietEcho[Module[{NOLOOPS,tempCycleMatrices,inCycleMatrix,edgesin,nodesin,pos,cycles0,(*cycles1, cycles2, cycles3,*)cycles(*,OUT*),edges,nodes,edgelist,vertices,intmasses,extmasses,vmax,masslessedges,masslesspos,vmasslesspos,allEdges,multiplicity,graph0,edgelistgraph,graph,ContactQ},
 NOLOOPS=(1+Length[edgesnodes[[1]]]-Length[Join[edgesnodes[[1]][[All,1]],edgesnodes[[1]][[All,1]]]//Flatten//DeleteDuplicates//Sort]);
 edgesin=edgesnodes[[1]];
 nodesin=edgesnodes[[-1]];
@@ -547,6 +556,36 @@ SortBy[Map[Append[#,Total[#]]&,inCycleMatrix],Last]
 ]
 ];
 Return[pos];
+]];
+(*Function that wraps back multi-edges in a controlled manner:*)
+FixLoopEdges[edgesnodes_]:=
+QuietEcho[Module[{NOLOOPS,tempCycleMatrices,numberOfAllowedSinglets,bananaQ,edgesnodesNoMultiEdges,temp0,temp1,temp11,temp2,temp22,temp3,multiEdgesGraphQ,foo1,norm,bad,res,tt,ttt,out},
+(*Code that detects if there are multi-edges:*)
+edgesnodesNoMultiEdges=Join[{DeleteDuplicatesBy[edgesnodes[[1]],First]},{edgesnodes[[2]]}];
+multiEdgesGraphQ=SameQ[edgesnodes,edgesnodesNoMultiEdges];
+bananaQ=SameQ[Length[edgesnodesNoMultiEdges[[1]]],1];
+If[multiEdgesGraphQ,Echo["No multi-edges detected."],Echo["Multi-edges detected!"]];
+(*Old code works well when no multi-edges are present so we keep it to deal with the input diagram with multi-edges stripped out:*)
+(*out=If[multiEdgesGraphQ,FixLoopEdgesMEF[edgesnodes],FixLoopEdgesMEF[edgesnodesNoMultiEdges]];*)
+out=If[bananaQ,FixLoopEdgesMEF[edgesnodes],If[multiEdgesGraphQ,FixLoopEdgesMEF[edgesnodes],FixLoopEdgesMEF[edgesnodesNoMultiEdges]]];
+(*Patch to handel multi-edges more reliably:*)
+If[multiEdgesGraphQ,Nothing,
+NOLOOPS=(1+Length[edgesnodes[[1]]]-Length[Join[edgesnodes[[1]][[All,1]],edgesnodes[[1]][[All,1]]]//Flatten//DeleteDuplicates//Sort]);
+temp0=PositionIndex[First/@edgesnodes[[1]]];
+temp1=Normal[SortBy[Select[Map[DeleteCases[#,Alternatives@@out]&,temp0,{1}],#!={}&],LeafCount[#]&]][[All,2]]//Echo;
+temp11=Normal[SortBy[Select[Map[#&,temp0,{1}],#!={}&],LeafCount[#]&]][[All,2]];
+foo1=With[{es=UndirectedEdge@@@(First/@edgesnodes[[1]]),cy=FindFundamentalCycles[Graph[UndirectedEdge@@@(First/@edgesnodes[[1]])]]//.UndirectedEdge[a_,b_]:>UndirectedEdge[Min[a,b],Max[a,b]]},
+norm=Map[UndirectedEdge@@Sort[List@@#]&,cy,{2}];bad=Keys@Select[Counts@Flatten@(DeleteDuplicates/@norm),#>1&];res=DeleteCases[#,Alternatives@@bad]&/@norm;
+tt=Flatten[Position[es,Alternatives@@#]]&/@res;ttt={First[#]}&/@Select[tt,(#=!={}&&FreeQ[#,Alternatives@@out])&]
+]//Echo;
+temp1=Cases[temp1,Alternatives@@Join[ttt,{{_,__}}]];
+numberOfAllowedSinglets=NOLOOPS-(Plus@@((Length/@(Select[Normal[temp1],Length[#]>1&]))-1))-Length[out];
+temp2=keepFirstNSingletons[Reverse@temp1,numberOfAllowedSinglets]//Echo;
+temp22=keepFirstNSingletons[Reverse@temp11,numberOfAllowedSinglets];
+temp3=Flatten[If[SameQ[Length[#],1],#,#[[1;;-2]]]&/@temp2]//Echo;
+out=orderByAppearance[Join[out,If[SameQ[Length[temp3],NOLOOPS-Length[out]],temp3,Join[temp3,Flatten[DeleteCases[#,Alternatives@@temp3]&/@temp2][[1;;NOLOOPS-Length[temp3]-1]]]]],Select[temp22,Length[#]>1&]]//Echo;
+];
+Return[out];
 ]];
 
 (*------------------------------------------------------------*)
