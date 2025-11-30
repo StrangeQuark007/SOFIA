@@ -26,6 +26,7 @@ FastFubini::usage = "Eliminates given variables in a set of polynomials. Availab
 FeynmanDraw::usage = "Opens a drawing window where you can sketch a diagram with your mouse. The output is the corresponding list of edges and nodes.";
 FeynmanPlot::usage = "Plots the input diagram.";
 finalEdgeMom::usage = "A list of edge momenta chosen by SOFIABaikov, minimizing the number of integration variables.";
+edgesMomenta::usage = "An initial list of edge momenta.";
 FixLoopEdgesMEF::usage = "Finds an 'optimal' labeling of loop momenta (only stable for diagrams without multi-edges).";
 FixLoopEdges::usage = "Finds an 'optimal' labeling of loop momenta.";
 GenerateKinematics::usage = "Generates n-point kinematics.";
