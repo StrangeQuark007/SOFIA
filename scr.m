@@ -621,7 +621,247 @@ nlbl[loop_,listE_]:=loop+(Plus@@listE);
 homogeneizeKin[arg_]:=arg//.Subscript[s, a___]:>ToExpression["s"<>StringJoin[ToString/@{a}]]//.Subscript[M, i_]:>Sqrt[ToExpression["MM"<>ToString[i]]]//.Subscript[m, i_]:>Sqrt[ToExpression["mm"<>ToString[i]]]//.M:>Sqrt[MM]//.m:>Sqrt[mm];
 
 (*------------------------------------------------------------*)
+
 (*SOFIABaikov:*)
+rankDropRule[OUT_]:=Module[{},
+temp1=#[[1]]&/@OUT;
+numTemp=Thread[#->(#1[[1]]/#1[[-1]]&/@RandomChoice[Subsets[DeleteDuplicates[RandomPrime[{5,10000},1000]],{2}],Length[#]])]&[Variables[temp1]];
+temp2=NullSpace/@(temp1//.numTemp);
+temp3=Table[If[SameQ[temp2[[ii]],{}],
+{},
+Subsets[#[[1]],{#[[-1]]}]&[{DeleteDuplicates[Flatten[#]],Length[#]}&[
+SparseArray[#]["NonzeroPositions"]&/@temp2[[ii]]]]
+]
+,{ii,Length[temp2]}];
+temp4=If[Length[#1]>0,First[Flatten[SparseArray[#1]["NonzeroPositions"]]],NONE]&/@Table[
+Factor[Det[ExciseRowsColumns[(temp1//.numTemp)[[ii]],temp3[[ii]][[jj]],temp3[[ii]][[jj]]]]]
+,{ii,Length[temp3]},{jj,Length[temp3[[ii]]]}];
+temp5=Table[
+If[
+SameQ[temp4[[ii]],NONE],
+Echo["NO rank drop detected for matrix: "<>ToString[ii]<>""];temp1[[ii]],
+Echo["Rank drop detected for matrix: "<>ToString[ii]<>""];ExciseRowsColumns[temp1[[ii]],temp3[[ii]][[temp4[[ii]]]],temp3[[ii]][[temp4[[ii]]]]]
+]
+,{ii,Length[temp4]}];
+If[ContainsAny[Simplify[Det/@(temp5//.numTemp)],{0}],Echo[Style["Something is wrong: some matrices still not have full rank. You should probably reconsider the input of loop edges.",Red]],Echo[Style["All matrices have full rank!",Blue]]];
+Return[MatrixForm/@temp5];
+];
+FindLoopMomShift[AllEliminate\[CapitalLambda]_]:=Module[{},
+seed=Select[AllEliminate\[CapitalLambda]/.Subscript[l, i_]:>Subscript[l, i]+Subscript[a, i],!FreeQ[#,Subscript[l, _]]&];
+tab=DeleteCases[Table[#[[1]]&/@Position[seed,Subscript[a, ii]],{ii,noLoops}],{}];
+pos[0]=tab[[1]];
+Do[
+pos[ii]=DeleteCases[tab[[ii]],Alternatives@@Flatten[Table[tab[[jj-1]],{jj,ii}]]],
+{ii,Length[tab]}];
+foo1=seed[[Flatten[Table[pos[ii],{ii,Length[tab]}]]]]//.Rule[a_,b_]:>b;
+foo2=(#[[1]]&/@(Cases[#,Subscript[l, _],Infinity]&/@foo1))-foo1;
+aShift=If[SameQ[#,{}],
+Flatten[Solve[#==0,DeleteDuplicates[Cases[#,Subscript[a, _],Infinity]]]&[(#-(#//.Subscript[p, _]|Subscript[a, _]:>0))&[filteredList[Select[AllEliminate\[CapitalLambda]/.Subscript[l, i_]:>Subscript[l, i]+Subscript[a, i],!FreeQ[#,Subscript[l, _]]&]]//.Rule[a_,b_]:>b]]],
+#]&[Flatten[Solve[#==0,DeleteDuplicates[Cases[#,Subscript[a, _],Infinity]]]&[foo2]]];
+lShift=Table[Subscript[l, ii]->Subscript[l, ii]+Subscript[a, ii],{ii,noLoops}]//.aShift//.Subscript[a, _]:>0;
+Return[{aShift,lShift}];
+];
+LBL[edges2_List,nodes_List,loopEdges_,verboseTrueOrFalse_: False]:=Module[{Substitutions},
+edges={#[[1]],#[[-1]]^2}&/@edges2;
+(*generate temp kinematics:*)
+Substitutions=GenerateKinematics[Length[nodes]];
+(*graph numbers:*)
+If[SameQ[verboseTrueOrFalse,True],Echo[#," vertices = "],Nothing]&[vertices=Join[edges[[All,1]],nodes[[All,1]]]//Flatten//DeleteDuplicates//Sort];
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"noEdges ="],Nothing]&[noEdges=Length[edges]];
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"noVertices ="],Nothing]&[noVertices=Length[vertices]];
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"noLoops ="],Nothing]&[noLoops=1+noEdges-noVertices];
+(*Assign momenta to the edges; q's will be solved for*)
+edgesMomenta=Table[Subscript[q, e],{e,noEdges}];
+Do[Echo[edgesMomenta[[loopEdges[[a]]]]=Subscript[l, a],"debug"],{a,Length[loopEdges]}];
+(*Write down momentum conservation at every vertex*)
+vertexMomenta=Table[0,{v,(*noEdges*)Max[Join[ Select[Flatten[edges],NumericQ],{noEdges}]]}];
+(*Note: Here we assume that vertices are ordered 1,2,...,noVertices.*)
+Echo[edges,"edges"];
+Echo[edgesMomenta,"edgesMomenta"];
+Echo[vertexMomenta,"vertexMomenta"];
+(*Loop over edges to update vertexMomenta*)
+Do[
+Echo[e=edges[[i,1]],"debug"];
+vertexMomenta[[e[[1]]]]-=edgesMomenta[[i]];
+vertexMomenta[[e[[2]]]]+=edgesMomenta[[i]];
+,{i,noEdges}];
+(*Adapt the nodes notation in terms of M, instead of p:*)
+nodeMomenta=(#(*Assuming that that last momenta is linear dependent:*)/.#[[-1]]:>(Plus@@(-#[[1;;-2]])))&[Table[Subscript[p, ii],{ii,Length[nodes]}]];
+nodes2=Table[{nodes[[ii]][[1]],nodeMomenta[[ii]]},{ii,Length[nodes]}];
+Do[
+vertexMomenta[[v[[1]]]]+=v[[2]];
+,{v,nodes2}];
+(*Rule that takes masses from substitution to values input in nodes[[i,2]]:*)
+If[Length[Substitutions]>1,
+substitutions=Substitutions/.(Thread[SortBy[DeleteDuplicates[Cases[Substitutions,Subscript[M, _],Infinity]],-LeafCount[#]&]->#]&[Table[nodes[[ii,2]],{ii,Length[nodes]}]]),
+substitutions=Substitutions
+];
+MySubstitutions=substitutions;
+(*Solve for momentum conservation:*)
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"edgesMomenta = "],Nothing]&[edgesMomenta=(If[#1=={},FLAG,edgesMomenta/.(#1[[1]])]&[Solve[vertexMomenta==0,Cases[Variables[edgesMomenta],Subscript[q, _]]]])];
+(*Print[edgesMomenta];*)
+If[SameQ[edgesMomenta,FLAG],
+Print[Style["Cannot solve for momentum conservation! Are you sure the choice of LoopEdges is correct?",Bold,Red]];Print[$Failed](*Abort[]*),
+(*Write on-shell conditions:*)
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"onShellConditions = "],Nothing]&[onShellConditions=Table[edgesMomenta[[i]]\[CenterDot]edgesMomenta[[i]]-edges[[i,2]],{i,noEdges}]//.substitutions];
+(*Kinematic invariants:*)
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"allInvariants = "],Nothing]&[allInvariants=Variables[onShellConditions]];
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"loopInvariants = "],Nothing]&[loopInvariants=Cases[allInvariants,Subscript[l, _]\[CenterDot]_]];
+(*seeds for the loop:*)
+extraPropagators={};
+eliminate\[CapitalLambda][0]={};
+(*The main loop over the independent loop momenta:*)
+LE=Table[
+If[SameQ[verboseTrueOrFalse,True],Echo["------- Looking at loop "<>ToString[a]<>"...-------"],Nothing];
+loopMomenta=Select[Join[edgesMomenta,extraPropagators]//.Flatten[Table[eliminate\[CapitalLambda][A],{A,0,a-1}]],!FreeQ[#,Subscript[l, a]]&];
+loopMomenta=Select[loopMomenta,Intersection[Variables[#],Table[Subscript[l, b],{b,a-1}]]==={}&];(*keep only those not used before*)
+If[SameQ[verboseTrueOrFalse,True],Echo[#,ToString[a]<>") loopMomenta = "],Nothing]&[loopMomenta=DeleteDuplicates[(#/D[#,Subscript[l, a]])&/@loopMomenta]];(*bring into the form Subscript[l, a] + ...*)
+(*Added to reduce superfluous scalar products:*)
+loopMOMENTA[a]=loopMomenta;
+ansatz[a]=Table[Subscript[l, a]+\[CapitalLambda][a][ii],{ii,Length[loopMOMENTA[a]]}];
+eliminate\[CapitalLambda]TEMP[a]=Thread[Array[\[CapitalLambda][a],Length[#1]]->#1]&[loopMOMENTA[a]/.Subscript[l, a]:>0];
+trivialRule=DeleteCases[eliminate\[CapitalLambda]TEMP[a]/.Rule[a_,b_]/;b=!=0:>dummy,dummy];
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"Lambda map = "],Nothing]&[eliminate\[CapitalLambda][a]=DeleteCases[eliminate\[CapitalLambda]TEMP[a],Alternatives@@trivialRule]];
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"Loop momenta = "],Nothing]&[loopMomenta=ansatz[a]/.trivialRule];
+(*Construct the revelant Gram matrix*)
+Gram=Expand[Table[Subscript[v, 1]\[CenterDot]Subscript[v, 2],{Subscript[v, 1],loopMomenta},{Subscript[v, 2],loopMomenta}]]//.substitutions;
+gramLoop[a]=Gram;
+extraPropagators=Join[extraPropagators,Flatten[Table[loopMomenta[[j]]-loopMomenta[[i]],{i,Length[loopMomenta]},{j,i+1,Length[loopMomenta]}]]];
+(*Compute the external Gram determinant*)
+externalGram=Table[(Subscript[v, 1]-Subscript[l, a])\[CenterDot](Subscript[v, 2]-Subscript[l, a]),{Subscript[v, 1],Complement[loopMomenta,{Subscript[l, a]}]},{Subscript[v, 2],Complement[loopMomenta,{Subscript[l, a]}]}]//Expand[#]//.substitutions&;
+externalGram=If[SameQ[externalGram,{}],{{1}},externalGram];
+gramExt[a]=externalGram;
+If[SameQ[verboseTrueOrFalse,True],Echo["------- Done with loop "<>ToString[a]<>"!-------"],Nothing];
+MatrixForm/@{gramExt[a],gramLoop[a]}
+,{a,noLoops}];
+Echo[Style["------- Done with all loops! Summary: -------",Blue]];
+(*kinematic used:*)
+Echo[substitutions,"Kinematic substitutions ="];
+(*record some variables:*)
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"Eliminate \[CapitalLambda] ="],Nothing]&[AllEliminate\[CapitalLambda]=Flatten[Table[eliminate\[CapitalLambda][A],{A,noLoops}]]];
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"Is there any relations between the \[CapitalLambda]s found above? ="],Nothing]&[relLamdas=If[SameQ[#,{DUMMY,dummy}],NONE,DeleteCases[#,dummy->DUMMY]]&[
+(List@@LogicalExpand[(Eliminate[(#//.Rule[a_,b_]:>a-b)==0,DeleteDuplicates[Cases[#,Subscript[_,_],Infinity]]]&&dummy==DUMMY)&[AllEliminate\[CapitalLambda]]])/. (lhs_==rhs_):>Thread[(#1[[1]]->#1[[-1]])&[SortBy[{lhs,rhs},Length]]]//.Rule[-A1_,A2_]:>Rule[A1,-A2]
+]];
+If[SameQ[verboseTrueOrFalse,True],Echo[#," Momenta in terms of Lambda variables = "],Nothing]&[psAs\[CapitalLambda]=Flatten[Solve[(#//.Rule[a_,b_]:>a-b)==0,DeleteDuplicates[Cases[#,Subscript[_,_],Infinity]]]&[AllEliminate\[CapitalLambda]//.If[SameQ[relLamdas,NONE],{},relLamdas]]]];
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"\[CapitalLambda]s depending on ls = "],Nothing]&[loopBack=If[SameQ[#,{}],NONE,#]&[
+Quiet[Flatten[Solve[(#//.Rule[a_,b_]:>a-b)==0,Select[DeleteDuplicates[Cases[#,\[CapitalLambda][_][_],Infinity]],!FreeQ[#//.AllEliminate\[CapitalLambda],Subscript[l, __]]&]]&[Select[psAs\[CapitalLambda],!FreeQ[#,Subscript[l, _]]&]]]&[Select[psAs\[CapitalLambda],!FreeQ[#,Subscript[l, _]]&]]]
+]];
+(*expected (minimal) number of integration variables:*)
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"Number of expected scalar products (integration variables) = "],Nothing]&[nLBL=noLoops+Length[AllEliminate\[CapitalLambda]]];
+(*Function to detect if loop momentum shifts are needed:*)
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"Shift in loop momenta = "],Nothing]&[shift=If[Length[DeleteDuplicates[Cases[Flatten[LE//.AllEliminate\[CapitalLambda],1],Subscript[l, _]\[CenterDot]_,Infinity]]]-nLBL>0,
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"Looking for loop momenta shift..."],#]&[FindLoopMomShift[AllEliminate\[CapitalLambda]][[-1]]],
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"Number of integration variables already minimized! Proceeding..."],#]&[{}]
+]];
+(*final on-shell conditions solved:*)
+onShellConditions2=onShellConditions/.shift//.substitutions//Simplify;
+MyPropagators=onShellConditions2;
+temp[0]=onShellConditions2;
+sol[0]={};
+Do[
+sol[a]=Flatten[Quiet@Solve[#==0,DeleteDuplicates[Cases[#,Subscript[l, a]\[CenterDot]_,Infinity]]]&[Select[onShellConditions2//.Flatten[Table[sol[b-1],{b,a}]],!FreeQ[#,Subscript[l, a]]&]]]
+,{a,noLoops}];
+SolvedOnShellCond=Flatten[Simplify[Table[sol[a],{a,noLoops}]]];
+(*return loop output:*)
+out000=Simplify[Flatten[Expand[Expand[Expand[Expand[LE]//.AllEliminate\[CapitalLambda]]/.shift]//.substitutions],1]];
+(*looking for rank drop:*)
+out=rankDropRule[out000];
+(*check the number of variables is minimized:*)
+If[SameQ[Length[DeleteDuplicates[Cases[out,Subscript[l, _]\[CenterDot]_,Infinity]]],nLBL],
+Echo[Style["The number of integration variables ("<>ToString[nLBL]<>") is matching expected bound!",Blue]],
+If[
+Echo[Style["It seems like the number of integration variables ("<>ToString[Length[DeleteDuplicates[Cases[out,Subscript[l, _]\[CenterDot]_,Infinity]]]]<>") is below expected bound!",Green]],
+Echo[Style["It seems like the number of integration variables ("<>ToString[Length[DeleteDuplicates[Cases[out,Subscript[l, _]\[CenterDot]_,Infinity]]]]<>") is above expected bound! You should probably reconsider the input of loop edges.",Red]]
+]
+];
+(*final answer and things to print:*)
+If[SameQ[verboseTrueOrFalse,True],Echo[#,"Edges momenta (after potential shift) = "],Nothing]&[finalEdgeMom=edgesMomenta/.shift];
+Return[out];
+];
+];
+Options[SOFIABaikov]={LoopEdges->Automatic,ShowXs->False,ShowDetailedDiagram->True,MaxCut->False,Dimension->dim};
+SOFIABaikov[edgesnodes_,opts:OptionsPattern[]]:=SOFIABaikov[edgesnodes[[1]],edgesnodes[[-1]],opts];
+SOFIABaikov[edges_,nodes_,opts:OptionsPattern[]]:=
+EchoTiming[QuietEcho[
+Module[{momLabel,EdgeLabels,ShowXsDeFinition,ShowDetailedDiagraM,MaximalCuT,SetDimensioN},
+{EdgeLabels,ShowXsDeFinition,ShowDetailedDiagraM,MaximalCuT,SetDimensioN}=OptionValue[{LoopEdges,ShowXs,ShowDetailedDiagram,MaxCut,Dimension}];
+momLabel=If[SameQ[EdgeLabels,Automatic],Echo[FixLoopEdges[Join[{edges},{nodes}]],"Choice of loop edges made by the code:"],EdgeLabels]//QuietEcho;
+momLabel000=momLabel;
+(*===Updated on December 19 2025===*)
+If[SameQ[EdgeLabels,Automatic],Block[{Print=Identity},data=LBL[edges,nodes,momLabel]],data=LBL[edges,nodes,momLabel]];
+If[SameQ[edgesMomenta,FLAG],
+momLabel=If[SameQ[EdgeLabels,Automatic],Echo[FixLoopEdgesMEF[Join[{edges},{nodes}]],"Choice of loop edges made by the code:"],EdgeLabels];
+momLabel000=momLabel;
+data=LBL[edges,nodes,momLabel];
+];
+(*======================================*)
+(*find the change of variables where the propagors + ISPs are integration variables:*)
+sol1=Flatten[Simplify[Solve[#1==0,SolvedOnShellCond//.Rule[a_,b_]:>a]]]&[(#-Array[x,Length[#1]]&[onShellConditions2])];
+ISP1=Thread[#1->x/@Range[Length[SolvedOnShellCond]+1,Length[SolvedOnShellCond]+Length[#1]]]&[DeleteDuplicates[Cases[sol1/.Rule[a_,b_]:>b,_\[CenterDot]_,Infinity]]];
+sol2=Join[sol1//.ISP1,ISP1];
+ISP2=Thread[#1->x/@Range[Length[sol2]+1,Length[sol2]+Length[#1]]]&[DeleteDuplicates[Cases[data//.sol2//Factor,_\[CenterDot]_,Infinity]]];
+Echo[solFinal=Join[sol2,ISP2]//.x[i_]:>ToExpression["x"<>ToString[i]],"Change of variables to propagator basis = "];
+Echo[takeMaxCut=Thread[Array[x,Length[#1]]->ConstantArray[0,Length[#1]]]&[onShellConditions2]//.x[i_]:>ToExpression["x"<>ToString[i]],"Maximal cut conditions = "];
+Echo[matrices=Simplify[(out//.solFinal)],"Uncut external (odd positions) and internal (even positions) Gram matrices = "];
+(*List of E's:*)
+Elist=If[SameQ[#[[1]],\!\(\*
+TagBox[
+RowBox[{"{", 
+RowBox[{"{", "1", "}"}], "}"}],
+Function[BoxForm`e$, MatrixForm[BoxForm`e$]]]\)],0,Length[#[[1]]]]&/@(#1[[Select[Range[Length[#1]],OddQ[#]&]]]&[matrices]);
+(*List the x's:*)
+xs=SortBy[DeleteDuplicates[Cases[Factor[Det[#[[1]]]&/@matrices],x_Symbol/;StringMatchQ[SymbolName[x],"x"~~DigitCharacter..],{0,Infinity}]],StringLength@ToString[#]&];
+xs000=SortBy[DeleteDuplicates[Cases[solFinal//.Rule[a_,b_]:>a-b,x_Symbol/;StringMatchQ[SymbolName[x],"x"~~DigitCharacter..],{0,Infinity}]],StringLength@ToString[#]&];
+xsExpanded=Flatten[solFinal//.Rule[a_,b_]:>a-b//Solve[#==0,xs000]&];
+(*Shuffle the xs definitions according to ++1 pattern:*)
+ttemp1=SortBy[DeleteDuplicates[Cases[matrices,x_Symbol/;StringMatchQ[SymbolName[x],"x"~~DigitCharacter..],{0,Infinity}]],StringLength@ToString[#]&];
+ttemp2=SortBy[DeleteDuplicates[Cases[xsExpanded,x_Symbol/;StringMatchQ[SymbolName[x],"x"~~DigitCharacter..],{0,Infinity}]],StringLength@ToString[#]&];
+shuffleXs=Thread[Join[ttemp1,DeleteCases[ttemp2,Alternatives@@ttemp1]]->ttemp2];
+xs=xs/.shuffleXs;
+xs000=xs000/.shuffleXs;
+matrices=matrices/.shuffleXs;
+xsExpanded=xsExpanded/.shuffleXs;
+(*Put things together:*)
+If[SameQ[ShowXsDeFinition,False],Nothing,Print["x's in terms of dot products:",xsExpanded]];
+If[SameQ[ShowDetailedDiagraM,True],Print[{FeynPlot[edges,nodes,xsExpanded[[1;;Length[finalEdgeMom]]][[All,1]],momLabel000],
+			FeynPlot[edges,nodes,finalEdgeMom,momLabel000]}],Nothing];
+(*Measure zero tests:*)
+matricesPairs=Partition[matrices//.Transpose[A___]:>{{1}},2];
+matricesPairsMC={Det[#[[1]][[1]]],Det[#[[-1]][[1]]]}&/@(matricesPairs//.takeMaxCut);
+matricesPairsMC=DeleteCases[matricesPairsMC,{a_,b_}/;FreeQ[{a,b},_Symbol?(StringMatchQ[SymbolName[#],"x"~~DigitCharacter..]&)]];
+mzFLAG=If[SameQ[Cases[matricesPairsMC,x_Symbol/;StringMatchQ[SymbolName[x],"x"~~DigitCharacter..],{0,Infinity}],{}],
+Null,
+If[SameQ[#1,{}],
+Null,
+True
+]&[Flatten[Position[Cases[#,x_Symbol/;StringMatchQ[SymbolName[x],"x"~~DigitCharacter..],{0,Infinity}]&/@(Select[Factor[#[[-1]]/#[[1]]]&/@matricesPairsMC,! NumericQ[#] || # <= 0 &]),{}]]
+  ]
+  ];
+(*Integrand*)
+prefactor=((-2^(noLoops-Length[xs]) (-I)^noLoops Pi^((noLoops-Length[xs])/2))/Product[Gamma[(dim-Elist[[ii]])/2],{ii,Length[Elist]}]);
+integrand=(((-2^(noLoops-Length[xs]) (-I)^noLoops Pi^((noLoops-Length[xs])/2))/Product[Gamma[(dim-Elist[[ii]])/2],{ii,Length[Elist]}])(((Wedge@@Map[d[#]&,#1//.\[Nu][__]:>1])(Times@@If[Length[onShellConditions2]==Length[#1],1,#[[Length[onShellConditions2]+1;;-1]]]/Times@@(#[[;;Length[onShellConditions2]]])))&[#^\[Nu]/@Range[Length[#]]&[xs]])(Times@@(Table[Det[#1[[ii]][[1]][[1]]]^((Elist[[ii]]-dim+1)/2) Det[#1[[ii]][[-1]][[1]]]^((dim-Elist[[ii]]-2)/2),{ii,Length[#1]}]&[(*Partition[matrices,2]*)matricesPairs])))/.Wedge[AAA_]:>AAA;
+If[SameQ[MaximalCuT,False],
+Return[Echo[If[SameQ[SetDimensioN,dim],
+integrand,
+If[SameQ[Factor[prefactor//.dim->SetDimensioN],0],
+Print[Style["Warning: The constant prefactor of the Baikov integrand vanishes. Please use dimensional regularization, such as Dimension->4-2ep.", Bold, Red]],
+integrand//.dim->SetDimensioN]],"Uncut LBL Baikov = "]],
+If[SameQ[Factor[prefactor//.dim->SetDimensioN],0],
+Print[Style["Warning: The constant prefactor of the Baikov integrand vanishes. Please use dimensional regularization, such as Dimension->4-2ep.",Bold, Red]],
+Nothing];
+Return[TakeMaxCut[integrand,{dim->SetDimensioN}]]
+];
+]],"Total runtime= "];
+Clear[TakeMaxCut];
+TakeMaxCut[lblIntegrand_,dimRule_:{}]:=QuietEcho[Module[{},
+Clear[propsX,\[Nu]Map,maxcut];
+propsX=xs[[;;Length[onShellConditions2]]];
+\[Nu]Map=Thread[#->ConstantArray[1,Length[#1]]]&[\[Nu]/@Range[Length[onShellConditions2]]];
+maxcut=1/(2Pi I)^Length[propsX] (((Times@@propsX)(integrand/.\[Nu]Map/.Join[{\[Nu][i_]:>0},dimRule]))//.takeMaxCut//.Wedge@@{a___,d[0],b___}:>Wedge@@{a,b}//.Wedge[]:>1//.Wedge[d[a_]]:>d[a]);
+Return[Echo[maxcut,"Maximal cut LBL Baikov = "]];
+]];
+
+(*(*SOFIABaikov:*)
 rankDropRule[OUT_]:=Module[{},
 temp1=#[[1]]&/@OUT;
 numTemp=Thread[#->(#1[[1]]/#1[[-1]]&/@RandomChoice[Subsets[DeleteDuplicates[RandomPrime[{5,10000},1000]],{2}],Length[#]])]&[Variables[temp1]];
@@ -795,11 +1035,7 @@ Echo[solFinal=Join[sol2,ISP2]//.x[i_]:>ToExpression["x"<>ToString[i]],"Change of
 Echo[takeMaxCut=Thread[Array[x,Length[#1]]->ConstantArray[0,Length[#1]]]&[onShellConditions2]//.x[i_]:>ToExpression["x"<>ToString[i]],"Maximal cut conditions = "];
 Echo[matrices=Simplify[(out//.solFinal)],"Uncut external (odd positions) and internal (even positions) Gram matrices = "];
 (*List of E's:*)
-Elist=If[SameQ[#[[1]],\!\(\*
-TagBox[
-RowBox[{"{", 
-RowBox[{"{", "1", "}"}], "}"}],
-Function[BoxForm`e$, MatrixForm[BoxForm`e$]]]\)],0,Length[#[[1]]]]&/@(#1[[Select[Range[Length[#1]],OddQ[#]&]]]&[matrices]);
+Elist=If[SameQ[#[[1]],{{1}}],0,Length[#[[1]]]]&/@(#1[[Select[Range[Length[#1]],OddQ[#]&]]]&[matrices]);
 (*List the x's:*)
 xs=SortBy[DeleteDuplicates[Cases[Factor[Det[#[[1]]]&/@matrices],x_Symbol/;StringMatchQ[SymbolName[x],"x"~~DigitCharacter..],{0,Infinity}]],StringLength@ToString[#]&];
 xs000=SortBy[DeleteDuplicates[Cases[solFinal//.Rule[a_,b_]:>a-b,x_Symbol/;StringMatchQ[SymbolName[x],"x"~~DigitCharacter..],{0,Infinity}]],StringLength@ToString[#]&];
@@ -850,7 +1086,7 @@ propsX=xs[[;;Length[onShellConditions2]]];
 \[Nu]Map=Thread[#->ConstantArray[1,Length[#1]]]&[\[Nu]/@Range[Length[onShellConditions2]]];
 maxcut=1/(2Pi I)^Length[propsX] (((Times@@propsX)(integrand/.\[Nu]Map/.Join[{\[Nu][i_]:>0},dimRule]))//.takeMaxCut//.Wedge@@{a___,d[0],b___}:>Wedge@@{a,b}//.Wedge[]:>1//.Wedge[d[a_]]:>d[a]);
 Return[Echo[maxcut,"Maximal cut LBL Baikov = "]];
-]];
+]];*)
 
 (*------------------------------------------------------------*)
 (*Prepare the singularity system:*)
